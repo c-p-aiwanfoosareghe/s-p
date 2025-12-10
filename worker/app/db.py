@@ -7,11 +7,11 @@ def get_conn():
     if _conn:
         return _conn
     _conn = psycopg2.connect(
-        host=os.getenv("POSTGRES_HOST"),
+        host=os.getenv("POSTGRES_HOST", "postgres"),
         port=os.getenv("POSTGRES_PORT", 5432),
-        dbname=os.getenv("POSTGRES_DB"),
-        user=os.getenv("POSTGRES_USER"),
-        password=os.getenv("POSTGRES_PASSWORD")
+        dbname=os.getenv("POSTGRES_DB", "reels"),
+        user=os.getenv("POSTGRES_USER", "reeluser"),
+        password=os.getenv("POSTGRES_PASSWORD", "secret")
     )
     _conn.autocommit = True
     return _conn
