@@ -1,51 +1,40 @@
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, HttpUrl
-import traceback
+from app.scraper import scrape_reel
 
 app = FastAPI(title="Reels Scraper API")
 
-# ---- Request Schema ----
 class ReelsRequest(BaseModel):
     url: HttpUrl
     prefer_proxy: bool = True
 
-
-# ---- Your scraping logic goes here ----
-def scrape_reel(url: str, prefer_proxy: bool):
-    """
-    Put your actual scraping code here.
-    This function should return the scraped result.
-    """
-    try:
-        # Example (replace this with your real Instagram scraping logic):
-        result = {
-            "url": url,
-            "proxy_used": prefer_proxy,
-            "status": "Scraped successfully",
-            # You can add downloaded video URL, caption, image, etc.
-        }
-        return result
-
-    except Exception as e:
-        print("Scraper Error:", traceback.format_exc())
-        raise
-
-
-# ---- API Endpoint ----
 @app.post("/scrape")
-def scrape(req: ReelsRequest):
-    """
-    Runs scraping immediately and returns the result directly.
-    """
+async def scrape(req: ReelsRequest):
     try:
-        data = scrape_reel(str(req.url), req.prefer_proxy)
-        return {"ok": True, "data": data}
+        # scrape the reel
+        result = await scrape_reel(req.url, req.prefer_proxy)
+
+        # determine downloadable URL
+        video_s3_key = result.get("video_s3_key")
+        if video_s3_key:
+            # assuming your server serves /videos/<key> at root
+            download_url = f"{req.url.scheme}://{req.url.netloc}/{video_s3_key}" \
+                if video_s3_key.startswith("http") is False else video_s3_key
+        else:
+            download_url = None
+
+        return {
+            "ok": True,
+            "data": {
+                "url": req.url,
+                "status": result.get("status"),
+                "video_url": download_url
+            }
+        }
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-
-# ---- Health Check ----
 @app.get("/health")
 def health():
     return {"ok": True}
