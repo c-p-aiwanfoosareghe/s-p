@@ -34,7 +34,7 @@ WORKDIR /app
 RUN pip install --no-cache-dir -r requirements.txt
 
 # If using Playwright (optional but recommended)
-RUN playwright install --with-deps chromium
+# RUN playwright install --with-deps chromium
 
 COPY . /app
 
