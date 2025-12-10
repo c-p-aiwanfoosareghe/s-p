@@ -1,0 +1,64 @@
+import os
+import psycopg2
+from psycopg2.extras import Json
+
+_conn = None
+
+def get_conn():
+    global _conn
+    try:
+        if _conn is None or _conn.closed != 0:
+            _conn = psycopg2.connect(
+                host=os.getenv("POSTGRES_HOST", "postgres"),
+                port=os.getenv("POSTGRES_PORT", 5432),
+                dbname=os.getenv("POSTGRES_DB", "reels"),
+                user=os.getenv("POSTGRES_USER", "reeluser"),
+                password=os.getenv("POSTGRES_PASSWORD", "secret")
+            )
+            _conn.autocommit = True
+    except psycopg2.Error:
+        _conn = psycopg2.connect(
+            host=os.getenv("POSTGRES_HOST", "postgres"),
+            port=os.getenv("POSTGRES_PORT", 5432),
+            dbname=os.getenv("POSTGRES_DB", "reels"),
+            user=os.getenv("POSTGRES_USER", "reeluser"),
+            password=os.getenv("POSTGRES_PASSWORD", "secret")
+        )
+        _conn.autocommit = True
+
+    return _conn
+
+
+def insert_or_update_reel(meta: dict):
+    conn = get_conn()
+    cur = conn.cursor()
+    try:
+        cur.execute(
+            """
+            INSERT INTO reels (platform, post_id, url, title, uploader, posted_time,
+                video_s3_key, raw_metadata, status, error)
+            VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+            ON CONFLICT (url) DO UPDATE SET
+                title = EXCLUDED.title,
+                uploader = EXCLUDED.uploader,
+                posted_time = EXCLUDED.posted_time,
+                video_s3_key = EXCLUDED.video_s3_key,
+                raw_metadata = EXCLUDED.raw_metadata,
+                status = EXCLUDED.status,
+                error = EXCLUDED.error
+            """,
+            (
+                meta.get("platform", "facebook"),
+                meta.get("post_id"),
+                meta.get("url"),
+                meta.get("title"),
+                meta.get("uploader"),
+                meta.get("posted_time"),
+                meta.get("video_s3_key"),
+                Json(meta.get("raw_metadata") or {}),
+                meta.get("status", "fetched"),
+                meta.get("error")
+            )
+        )
+    finally:
+        cur.close()
