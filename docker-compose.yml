@@ -1,4 +1,5 @@
 version: "3.8"
+
 services:
   postgres:
     image: postgres:15
@@ -10,56 +11,16 @@ services:
       - pg_data:/var/lib/postgresql/data
     restart: unless-stopped
 
-  redis:
-    image: redis:7
-    restart: unless-stopped
-
-  minio:
-    image: minio/minio
-    command: server /data
-    environment:
-      MINIO_ROOT_USER: minioadmin
-      MINIO_ROOT_PASSWORD: minioadmin
-    ports:
-      - "9001:9000"
-    volumes:
-      - minio_data:/data
-    restart: unless-stopped
-
   api:
     build:
       context: .
     env_file: .env
-    command: uvicorn api.main:app --host 0.0.0.0 --port 8000 --reload
+    command: uvicorn main:app --host 0.0.0.0 --port 8000
     ports:
       - "8000:8000"
     depends_on:
-      - redis
       - postgres
-      - minio
-    restart: on-failure
-
-  worker:
-    build:
-      context: .
-    env_file: .env
-    command: celery -A worker.app.tasks worker --loglevel=info --concurrency=1
-    depends_on:
-      - redis
-      - postgres
-      - minio
-    restart: on-failure
-
-  beat:
-    build:
-      context: .
-    env_file: .env
-    command: celery -A worker.app.tasks beat --loglevel=info
-    depends_on:
-      - redis
-      - postgres
-    restart: on-failure
+    restart: unless-stopped
 
 volumes:
   pg_data:
-  minio_data:
