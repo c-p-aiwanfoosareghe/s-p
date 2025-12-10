@@ -1,19 +1,39 @@
 FROM python:3.11-slim
 
-# system deps for Playwright
-RUN apt-get update && apt-get install -y \
-    wget gnupg ca-certificates libnss3 libatk1.0-0 libatk-bridge2.0-0 \
-    libx11-xcb1 libxcomposite1 libxrandr2 libasound2 libpangocairo-1.0-0 \
-    libgbm1 build-essential netcat curl --no-install-recommends \
- && rm -rf /var/lib/apt/lists/*
+# Prevent interactive prompts
+ENV DEBIAN_FRONTEND=noninteractive
 
+# Install system dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    wget \
+    gnupg \
+    ca-certificates \
+    libnss3 \
+    libatk1.0-0 \
+    libatk-bridge2.0-0 \
+    libx11-xcb1 \
+    libxcomposite1 \
+    libxrandr2 \
+    libasound2 \
+    libpangocairo-1.0-0 \
+    libgbm1 \
+    libpango-1.0-0 \
+    libcups2 \
+    libxdamage1 \
+    libxfixes3 \
+    libxext6 \
+    libxkbcommon0 \
+    libgtk-3-0 \
+    curl \
+    netcat-openbsd \
+    build-essential \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Python dependencies
+COPY requirements.txt /app/requirements.txt
 WORKDIR /app
-COPY requirements.txt /app/
 RUN pip install --no-cache-dir -r requirements.txt
 
-# install Playwright browsers
-RUN python -m playwright install --with-deps chromium
-
-# copy project
 COPY . /app
-ENV PYTHONUNBUFFERED=1
+
+CMD ["python", "main.py"]
