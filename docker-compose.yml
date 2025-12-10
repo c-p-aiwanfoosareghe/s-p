@@ -1,17 +1,17 @@
 version: "3.8"
 services:
-  redis:
-    image: redis:7
-    restart: unless-stopped
-
-  db:
+  postgres:
     image: postgres:15
     environment:
       POSTGRES_DB: reels
       POSTGRES_USER: reeluser
       POSTGRES_PASSWORD: secret
     volumes:
-      - db_data:/var/lib/postgresql/data
+      - pg_data:/var/lib/postgresql/data
+    restart: unless-stopped
+
+  redis:
+    image: redis:7
     restart: unless-stopped
 
   minio:
@@ -26,25 +26,40 @@ services:
       - minio_data:/data
     restart: unless-stopped
 
-  worker:
-    build: ./worker
+  api:
+    build:
+      context: .
     env_file: .env
+    command: uvicorn api.main:app --host 0.0.0.0 --port 8000 --reload
+    ports:
+      - "8000:8000"
     depends_on:
       - redis
-      - db
+      - postgres
+      - minio
+    restart: on-failure
+
+  worker:
+    build:
+      context: .
+    env_file: .env
+    command: celery -A worker.app.tasks worker --loglevel=info --concurrency=1
+    depends_on:
+      - redis
+      - postgres
       - minio
     restart: on-failure
 
   beat:
-    build: ./worker
-    command: celery -A app.tasks beat --loglevel=info
+    build:
+      context: .
     env_file: .env
+    command: celery -A worker.app.tasks beat --loglevel=info
     depends_on:
       - redis
-      - db
-      - minio
+      - postgres
     restart: on-failure
 
 volumes:
-  db_data:
+  pg_data:
   minio_data:
