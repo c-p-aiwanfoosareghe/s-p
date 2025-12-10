@@ -1,26 +1,14 @@
-# Facebook Reels Scraper (Playwright + Celery + CAPTCHA handling)
+# Reels Scraper (Playwright + FastAPI + Celery + Postgres + MinIO)
 
-## Quickstart (local/testing)
-1. Copy `.env.example` → `.env` and fill values.
-2. Build and run:
+## Setup
+1. Copy `.env.example` → `.env` and edit values (DB, Redis, MinIO, optional proxies/CAPTCHA).
+2. Initialize the database schema:
+   - Start the stack once, or run psql manually:
+     ```
+     docker-compose up -d postgres
+     docker-compose exec postgres bash
+     psql -U reeluser -d reels -c "CREATE TABLE ..." -f /app/schema.sql
+     ```
+   - Alternatively run a local psql client and import `schema.sql`.
 
-## docker-compose up –build
-
-3. To queue a job (example using redis-cli or python):
-- Use Python inside the worker container:
-  ```
-  docker-compose exec worker bash
-  python -c "from app.tasks import enqueue_reel; enqueue_reel.delay('https://www.facebook.com/.../reel/123')"
-  ```
-
-## Production notes
-- Use high-quality residential proxies to reduce captcha triggers.
-- For multi-worker proxy usage counters, store usage counters in Redis instead of in-memory.
-- CAPTCHA auto-solve is dangerous: set `AUTO_SOLVE=false` in production unless you fully understand legal/ToS implications.
-- Replace MinIO defaults with AWS S3 credentials for production.
-- Harden Playwright sandboxing and scale by running multiple worker replicas with a proxy pool and shared Redis counters.
-
-## Legal / Ethics
-- Only scrape public content.
-- Respect robots, rate limits, and platform ToS.
-- For large-scale commercial use, consult legal counsel.
+3. Start the stack:
