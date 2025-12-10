@@ -1,8 +1,16 @@
 from fastapi import FastAPI, HTTPException
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, HttpUrl
 from app.scraper import scrape_reel
+import os
+
+# ensure videos folder exists
+os.makedirs("videos", exist_ok=True)
 
 app = FastAPI(title="Reels Scraper API")
+
+# Mount /videos for serving video files
+app.mount("/videos", StaticFiles(directory="videos"), name="videos")
 
 class ReelsRequest(BaseModel):
     url: HttpUrl
@@ -11,27 +19,17 @@ class ReelsRequest(BaseModel):
 @app.post("/scrape")
 async def scrape(req: ReelsRequest):
     try:
-        # scrape the reel
         result = await scrape_reel(req.url, req.prefer_proxy)
-
-        # determine downloadable URL
-        video_s3_key = result.get("video_s3_key")
-        if video_s3_key:
-            # assuming your server serves /videos/<key> at root
-            download_url = f"{req.url.scheme}://{req.url.netloc}/{video_s3_key}" \
-                if video_s3_key.startswith("http") is False else video_s3_key
-        else:
-            download_url = None
-
+        video_key = result.get("video_s3_key")
+        video_url = f"https://s-p-1.onrender.com/videos/{os.path.basename(video_key)}" if video_key else None
         return {
             "ok": True,
             "data": {
                 "url": req.url,
                 "status": result.get("status"),
-                "video_url": download_url
+                "video_url": video_url
             }
         }
-
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
