@@ -1,19 +1,35 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>FB Reel Downloader</title>
-  <link rel="stylesheet" href="style.css">
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Reels Downloader</title>
+    <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <div class="container">
-    <h1>Facebook Reel Downloader</h1>
-    <input type="text" id="reelUrl" placeholder="Paste Facebook reel URL here">
-    <button id="scrapeBtn">Scrape Reel</button>
-    <div id="result"></div>
-  </div>
 
-  <script src="script.js"></script>
+<div class="container">
+
+    <h1 class="title">⚡ Reels Downloader</h1>
+    <p class="subtitle">Download Facebook reels instantly in HD.</p>
+
+    <div class="card">
+        <input type="text" id="urlInput" placeholder="Paste Facebook Reel URL…" />
+        <button id="downloadBtn">Download</button>
+    </div>
+
+    <div id="loading" class="loading hidden">
+        <div class="spinner"></div>
+        <p>Processing… please wait</p>
+    </div>
+
+    <div id="result" class="result hidden">
+        <p>✅ Reel Ready</p>
+        <a id="downloadLink" href="#" download class="downloadFile">Download Video</a>
+    </div>
+
+</div>
+
+<script src="script.js"></script>
 </body>
 </html>
