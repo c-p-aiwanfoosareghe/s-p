@@ -2,23 +2,38 @@ import os
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, HttpUrl
 from yt_dlp import YoutubeDL
-
 from fastapi.staticfiles import StaticFiles
 
-app.mount("/", StaticFiles(directory="frontend", html=True), name="frontend")
-app.mount("/videos", StaticFiles(directory="videos"), name="videos")
+# ---------------------------------------------------------
+# Create FastAPI app
+# ---------------------------------------------------------
+app = FastAPI()
 
+# ---------------------------------------------------------
+# Directories
+# ---------------------------------------------------------
 VIDEOS_DIR = "videos"
+FRONTEND_DIR = "frontend"
+
 os.makedirs(VIDEOS_DIR, exist_ok=True)
 
+# ---------------------------------------------------------
+# Serve Frontend & Videos
+# ---------------------------------------------------------
+app.mount("/", StaticFiles(directory=FRONTEND_DIR, html=True), name="frontend")
+app.mount("/videos", StaticFiles(directory=VIDEOS_DIR), name="videos")
+
+# ---------------------------------------------------------
+# Request Model
+# ---------------------------------------------------------
 class ReelsRequest(BaseModel):
     url: HttpUrl
-    prefer_proxy: bool = True  # still there if you want
+    prefer_proxy: bool = True  # optional compatibility
 
+# ---------------------------------------------------------
+# reel downloader using yt-dlp
+# ---------------------------------------------------------
 def download_reel(url: str):
-    """
-    Downloads Facebook reel using yt-dlp and returns local video path.
-    """
     ydl_opts = {
         "format": "mp4",
         "outtmpl": os.path.join(VIDEOS_DIR, "%(id)s.%(ext)s"),
@@ -29,12 +44,15 @@ def download_reel(url: str):
     with YoutubeDL(ydl_opts) as ydl:
         info = ydl.extract_info(url, download=True)
         filename = f"{info['id']}.mp4"
-        return f"/videos/{filename}"  # URL served by FastAPI
+        return f"/videos/{filename}"
 
+# ---------------------------------------------------------
+# API route
+# ---------------------------------------------------------
 @app.post("/scrape")
 def scrape(req: ReelsRequest):
     try:
-        video_url = download_reel(str(req.url))  # <--- cast to str
+        video_url = download_reel(str(req.url))
         return {
             "ok": True,
             "data": {
@@ -46,7 +64,3 @@ def scrape(req: ReelsRequest):
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-        
-# Serve downloaded videos
-from fastapi.staticfiles import StaticFiles
-app.mount("/videos", StaticFiles(directory=VIDEOS_DIR), name="videos")
