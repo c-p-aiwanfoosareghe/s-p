@@ -4,35 +4,20 @@ from pydantic import BaseModel, HttpUrl
 from yt_dlp import YoutubeDL
 from fastapi.staticfiles import StaticFiles
 
-# ---------------------------------------------------------
-# Create FastAPI app
-# ---------------------------------------------------------
 app = FastAPI()
 
-# ---------------------------------------------------------
-# Directories
-# ---------------------------------------------------------
 VIDEOS_DIR = "videos"
 FRONTEND_DIR = "frontend"
 
 os.makedirs(VIDEOS_DIR, exist_ok=True)
 
-# ---------------------------------------------------------
-# Serve Frontend & Videos
-# ---------------------------------------------------------
-app.mount("/", StaticFiles(directory=FRONTEND_DIR, html=True), name="frontend")
-app.mount("/videos", StaticFiles(directory=VIDEOS_DIR), name="videos")
-
-# ---------------------------------------------------------
-# Request Model
-# ---------------------------------------------------------
+# -------------------- API MODEL --------------------
 class ReelsRequest(BaseModel):
     url: HttpUrl
-    prefer_proxy: bool = True  # optional compatibility
+    prefer_proxy: bool = True
 
-# ---------------------------------------------------------
-# reel downloader using yt-dlp
-# ---------------------------------------------------------
+
+# -------------------- DOWNLOAD FUNCTION --------------------
 def download_reel(url: str):
     ydl_opts = {
         "format": "mp4",
@@ -40,15 +25,13 @@ def download_reel(url: str):
         "quiet": True,
         "noplaylist": True,
     }
-
     with YoutubeDL(ydl_opts) as ydl:
         info = ydl.extract_info(url, download=True)
         filename = f"{info['id']}.mp4"
         return f"/videos/{filename}"
 
-# ---------------------------------------------------------
-# API route
-# ---------------------------------------------------------
+
+# -------------------- API ENDPOINT --------------------
 @app.post("/scrape")
 def scrape(req: ReelsRequest):
     try:
@@ -64,3 +47,11 @@ def scrape(req: ReelsRequest):
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+# -------------------- STATIC FILES --------------------
+# Serve frontend at /app
+app.mount("/app", StaticFiles(directory=FRONTEND_DIR, html=True), name="frontend")
+
+# Serve downloaded videos
+app.mount("/videos", StaticFiles(directory=VIDEOS_DIR), name="videos")
