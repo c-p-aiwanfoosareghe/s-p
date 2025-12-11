@@ -4,12 +4,9 @@ from pydantic import BaseModel, HttpUrl
 from app.scraper import scrape_reel
 import os
 
-# ensure videos folder exists
-os.makedirs("videos", exist_ok=True)
-
 app = FastAPI(title="Reels Scraper API")
 
-# Mount /videos for serving video files
+# Mount videos folder at /videos
 app.mount("/videos", StaticFiles(directory="videos"), name="videos")
 
 class ReelsRequest(BaseModel):
@@ -17,16 +14,19 @@ class ReelsRequest(BaseModel):
     prefer_proxy: bool = True
 
 @app.post("/scrape")
-async def scrape(req: ReelsRequest):
+async def enqueue(req: ReelsRequest):
     try:
-        result = await scrape_reel(req.url, req.prefer_proxy)
+        result = await scrape_reel(str(req.url), prefer_proxy=req.prefer_proxy)
         video_key = result.get("video_s3_key")
-        video_url = f"https://s-p-1.onrender.com/videos/{os.path.basename(video_key)}" if video_key else None
+        video_url = None
+        if video_key:
+            video_url = f"{os.getenv('BASE_URL', 'https://s-p-1.onrender.com')}/videos/{os.path.basename(video_key)}"
         return {
             "ok": True,
             "data": {
                 "url": req.url,
-                "status": result.get("status"),
+                "proxy_used": req.prefer_proxy,
+                "status": "Scraped successfully",
                 "video_url": video_url
             }
         }
