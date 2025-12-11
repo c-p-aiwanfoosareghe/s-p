@@ -31,11 +31,11 @@ def download_reel(url: str):
 @app.post("/scrape")
 def scrape(req: ReelsRequest):
     try:
-        video_url = download_reel(req.url)
+        video_url = download_reel(str(req.url))  # <--- cast to str
         return {
             "ok": True,
             "data": {
-                "url": req.url,
+                "url": str(req.url),
                 "proxy_used": False,
                 "status": "Scraped successfully",
                 "video_url": video_url
@@ -43,7 +43,7 @@ def scrape(req: ReelsRequest):
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-
+        
 # Serve downloaded videos
 from fastapi.staticfiles import StaticFiles
 app.mount("/videos", StaticFiles(directory=VIDEOS_DIR), name="videos")
