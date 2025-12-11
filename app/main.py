@@ -1,31 +1,42 @@
-from fastapi import FastAPI, HTTPException
-from fastapi.staticfiles import StaticFiles
-from pydantic import BaseModel, HttpUrl
-from app.scraper import scrape_reel
 import os
+from fastapi import FastAPI, HTTPException
+from pydantic import BaseModel, HttpUrl
+from yt_dlp import YoutubeDL
 
-app = FastAPI(title="Reels Scraper API")
+app = FastAPI(title="Facebook Reels Scraper API")
 
-# Mount videos folder at /videos
-app.mount("/videos", StaticFiles(directory="videos"), name="videos")
+VIDEOS_DIR = "videos"
+os.makedirs(VIDEOS_DIR, exist_ok=True)
 
 class ReelsRequest(BaseModel):
     url: HttpUrl
-    prefer_proxy: bool = True
+    prefer_proxy: bool = True  # still there if you want
+
+def download_reel(url: str):
+    """
+    Downloads Facebook reel using yt-dlp and returns local video path.
+    """
+    ydl_opts = {
+        "format": "mp4",
+        "outtmpl": os.path.join(VIDEOS_DIR, "%(id)s.%(ext)s"),
+        "quiet": True,
+        "noplaylist": True,
+    }
+
+    with YoutubeDL(ydl_opts) as ydl:
+        info = ydl.extract_info(url, download=True)
+        filename = f"{info['id']}.mp4"
+        return f"/videos/{filename}"  # URL served by FastAPI
 
 @app.post("/scrape")
-async def enqueue(req: ReelsRequest):
+def scrape(req: ReelsRequest):
     try:
-        result = await scrape_reel(str(req.url), prefer_proxy=req.prefer_proxy)
-        video_key = result.get("video_s3_key")
-        video_url = None
-        if video_key:
-            video_url = f"{os.getenv('BASE_URL', 'https://s-p-1.onrender.com')}/videos/{os.path.basename(video_key)}"
+        video_url = download_reel(req.url)
         return {
             "ok": True,
             "data": {
                 "url": req.url,
-                "proxy_used": req.prefer_proxy,
+                "proxy_used": False,
                 "status": "Scraped successfully",
                 "video_url": video_url
             }
@@ -33,6 +44,6 @@ async def enqueue(req: ReelsRequest):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.get("/health")
-def health():
-    return {"ok": True}
+# Serve downloaded videos
+from fastapi.staticfiles import StaticFiles
+app.mount("/videos", StaticFiles(directory=VIDEOS_DIR), name="videos")
