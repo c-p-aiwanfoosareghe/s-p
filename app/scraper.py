@@ -3,7 +3,10 @@ import requests
 import asyncio
 from playwright.async_api import async_playwright, TimeoutError as PWTimeoutError
 
-from utils import rand_ua, polite_sleep, load_proxies_from_env
+# scraper.py
+from .utils import rand_ua, polite_sleep, load_proxies_from_env
+from .storage import upload_bytes, _client, S3_BUCKET
+from .db import insert_or_update_reel
 
 PROXIES = load_proxies_from_env()
 MAX_PER_PROXY = int(os.getenv("MAX_REQUESTS_PER_PROXY", "10"))
