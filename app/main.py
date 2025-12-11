@@ -3,7 +3,10 @@ from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, HttpUrl
 from yt_dlp import YoutubeDL
 
-app = FastAPI(title="Facebook Reels Scraper API")
+from fastapi.staticfiles import StaticFiles
+
+app.mount("/", StaticFiles(directory="frontend", html=True), name="frontend")
+app.mount("/videos", StaticFiles(directory="videos"), name="videos")
 
 VIDEOS_DIR = "videos"
 os.makedirs(VIDEOS_DIR, exist_ok=True)
