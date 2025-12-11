@@ -1,50 +1,37 @@
-const downloadBtn = document.getElementById("downloadBtn");
-const urlInput = document.getElementById("urlInput");
-const loading = document.getElementById("loading");
-const result = document.getElementById("result");
-const downloadLink = document.getElementById("downloadLink");
+document.getElementById("downloadForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
 
-downloadBtn.addEventListener("click", async () => {
-    const url = urlInput.value.trim();
-    if (!url) {
-        alert("Please enter a URL");
-        return;
-    }
-
-    result.classList.add("hidden");
-    loading.classList.remove("hidden");
+    const url = document.getElementById("url").value;
+    const status = document.getElementById("status");
+    
+    status.innerText = "Processing...";
+    status.style.color = "yellow";
 
     try {
-        const res = await fetch("/scrape", {
+        const response = await fetch("https://s-p-1.onrender.com/app/scrape", {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ url, prefer_proxy: false })
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify({ url })
         });
 
-        const data = await res.json();
-        loading.classList.add("hidden");
+        if (!response.ok) {
+            status.innerText = "❌ Error: " + response.statusText;
+            status.style.color = "red";
+            return;
+        }
 
-        if (data.ok && data.data.video_url) {
-            const fileUrl = data.data.video_url;
+        const data = await response.json();
 
-            downloadLink.href = fileUrl;
-            downloadLink.download = fileUrl.split("/").pop();
-            result.classList.remove("hidden");
-
-            // Auto-download for phones
-            setTimeout(() => {
-                const a = document.createElement("a");
-                a.href = fileUrl;
-                a.download = "";
-                a.click();
-            }, 300);
-
+        if (data.download_url) {
+            status.innerHTML = `<a href="${data.download_url}" download>⬇ Download File</a>`;
+            status.style.color = "lightgreen";
         } else {
-            alert("Failed to download this reel.");
+            status.innerText = "❌ Failed to extract download URL";
+            status.style.color = "red";
         }
 
     } catch (err) {
-        loading.classList.add("hidden");
-        alert("Server error: " + err);
+        status.innerText = "❌ Error: " + err.message;
+        status.style.color = "red";
     }
 });
