@@ -23,12 +23,9 @@ scrapeBtn.addEventListener("click", async () => {
         const data = await response.json();
 
         if (data.ok && data.data.video_url) {
-            const fullVideoUrl = window.location.origin + data.data.video_url;
-
-            // Create a clickable link that triggers download
             resultDiv.innerHTML = `
                 <p>Scraped successfully!</p>
-                <a href="${fullVideoUrl}" download="reel.mp4">Download Video</a>
+                <a href="${data.data.video_url}" target="_blank">Download Video</a>
             `;
         } else {
             resultDiv.innerHTML = `<span style='color:red;'>Failed to scrape video.</span>`;
